@@ -57,7 +57,17 @@ async function startStream(db, schedule) {
     // 1. Mark as 'starting' to prevent duplicate triggers
     await db.run('UPDATE schedules SET status = "starting" WHERE id = ?', [schedule.id]);
 
-    // 2. Fetch Account credentials
+    // Check if using Custom RTMP Bypass
+    if (String(schedule.use_custom_rtmp) === 'true') {
+      console.log(`[ENGINE] Using Custom RTMP for schedule ${schedule.id}. Skipping YouTube API...`);
+      if (!schedule.rtmp_url || !schedule.stream_name) {
+        throw new Error('Missing Custom RTMP URL or Stream Key in database.');
+      }
+      await launchFFmpeg(db, schedule, schedule.rtmp_url, schedule.stream_name);
+      return; // Exit here, don't execute YouTube API
+    }
+
+    // 2. Fetch Account credentials (YouTube API Flow)
     const account = await db.get('SELECT * FROM accounts WHERE id = ?', [schedule.account_id]);
     if (!account) throw new Error('Account not found');
 

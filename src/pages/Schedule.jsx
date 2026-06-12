@@ -75,7 +75,10 @@ export default function Schedule() {
     thumbnail: '',
     video_quality: '720p',
     background_music: 'none',
-    loop_mode: 'infinite'
+    loop_mode: 'infinite',
+    use_custom_rtmp: false,
+    rtmp_url: '',
+    stream_name: ''
   };
   const [formData, setFormData] = useState(initialForm);
 
@@ -209,8 +212,21 @@ export default function Schedule() {
 
   const handleSaveSchedule = (e) => {
     e.preventDefault();
-    if (!formData.title || !formData.mediaSource || !formData.accountId) {
-      setAlertModal({ isOpen: true, title: 'Incomplete Form', message: 'Please provide a Stream Title, Media Source (Playlist), and a Target Account.'});
+    
+    const isCustom = String(formData.use_custom_rtmp) === 'true';
+
+    if (!formData.mediaSource) {
+      setAlertModal({ isOpen: true, title: 'Incomplete Form', message: 'Please select a Media Source (Playlist).'});
+      return;
+    }
+
+    if (!isCustom && (!formData.title || !formData.accountId)) {
+      setAlertModal({ isOpen: true, title: 'Incomplete Form', message: 'Please provide a Stream Title and select a Target Account.'});
+      return;
+    }
+
+    if (isCustom && (!formData.rtmp_url || !formData.stream_name)) {
+      setAlertModal({ isOpen: true, title: 'Incomplete Form', message: 'Please provide both RTMP URL and Stream Key.'});
       return;
     }
 
@@ -316,15 +332,36 @@ export default function Schedule() {
               </h4>
               <div className="space-y-3">
                 <div className="space-y-1">
-                  <label className="text-xs text-slate-400 font-medium flex items-center gap-1"><User size={14}/> YouTube Account</label>
-                  <select name="accountId" value={formData.accountId} onChange={handleInputChange} className="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-white focus:border-purple-500 outline-none text-sm appearance-none">
-                    <option value="">-- Select YouTube Account --</option>
-                    {accounts.map(acc => (
-                      <option key={acc.id} value={acc.id}>{acc.youtube_name}</option>
-                    ))}
+                  <label className="text-xs text-slate-400 font-medium flex items-center gap-1"><Globe size={14}/> Destination Mode</label>
+                  <select name="use_custom_rtmp" value={String(formData.use_custom_rtmp) === 'true' ? 'true' : 'false'} onChange={(e) => setFormData(prev => ({ ...prev, use_custom_rtmp: e.target.value === 'true' }))} className="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-white focus:border-purple-500 outline-none text-sm appearance-none font-bold text-purple-300">
+                    <option value="false">📺 YouTube Auto (API) - Default</option>
+                    <option value="true">🔗 Custom RTMP (Facebook, Twitch, TikTok, dll)</option>
                   </select>
-                  {accounts.length === 0 && <p className="text-[10px] text-red-500 mt-1">No accounts connected. Go to Accounts page.</p>}
                 </div>
+
+                {String(formData.use_custom_rtmp) === 'true' ? (
+                  <div className="grid grid-cols-1 gap-3 p-3 bg-purple-900/20 border border-purple-500/30 rounded-lg">
+                    <div className="space-y-1">
+                      <label className="text-xs text-purple-300 font-medium">RTMP URL</label>
+                      <input type="text" name="rtmp_url" value={formData.rtmp_url} onChange={handleInputChange} placeholder="e.g. rtmp://live.twitch.tv/app" className="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-white focus:border-purple-500 outline-none text-sm" />
+                    </div>
+                    <div className="space-y-1">
+                      <label className="text-xs text-purple-300 font-medium">Stream Key</label>
+                      <input type="password" name="stream_name" value={formData.stream_name} onChange={handleInputChange} placeholder="live_123456789" className="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-white focus:border-purple-500 outline-none text-sm" />
+                    </div>
+                  </div>
+                ) : (
+                  <div className="space-y-1">
+                    <label className="text-xs text-slate-400 font-medium flex items-center gap-1"><User size={14}/> YouTube Account</label>
+                    <select name="accountId" value={formData.accountId} onChange={handleInputChange} className="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-white focus:border-purple-500 outline-none text-sm appearance-none">
+                      <option value="">-- Select YouTube Account --</option>
+                      {accounts.map(acc => (
+                        <option key={acc.id} value={acc.id}>{acc.youtube_name}</option>
+                      ))}
+                    </select>
+                    {accounts.length === 0 && <p className="text-[10px] text-red-500 mt-1">No accounts connected. Go to Accounts page.</p>}
+                  </div>
+                )}
                 <div className="space-y-1">
                   <label className="text-xs text-slate-400 font-medium flex items-center gap-1"><Video size={14}/> Media Source (Playlist)</label>
                   <select name="mediaSource" value={formData.mediaSource} onChange={handleInputChange} className="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-white focus:border-purple-500 outline-none text-sm appearance-none">
@@ -363,45 +400,50 @@ export default function Schedule() {
               </div>
             </div>
 
-            {/* Stream Metadata */}
-            <div className="space-y-4">
-              <h4 className="text-sm font-bold text-purple-400 uppercase tracking-wider flex items-center gap-2 border-b border-slate-800 pb-2">
-                <Settings size={16} /> Stream Metadata
-              </h4>
-              <div className="space-y-3">
-                <div className="space-y-1">
-                  <label className="text-xs text-slate-400 font-medium flex items-center gap-1"><FileText size={14}/> Stream Title</label>
-                  <input type="text" name="title" value={formData.title} onChange={handleInputChange} placeholder="e.g. 24/7 Chill Lofi Beats" className="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-white focus:border-purple-500 outline-none text-sm" />
-                </div>
-                <div className="space-y-1">
-                  <label className="text-xs text-slate-400 font-medium">Description</label>
-                  <textarea name="description" value={formData.description} onChange={handleInputChange} rows="3" placeholder="Stream description..." className="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-white focus:border-purple-500 outline-none text-sm resize-none" />
-                </div>
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-1">
-                    <label className="text-xs text-slate-400 font-medium">Category</label>
-                    <select name="category" value={formData.category} onChange={handleInputChange} className="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-white focus:border-purple-500 outline-none text-sm appearance-none">
-                      <option value="20">Gaming</option>
-                      <option value="10">Music</option>
-                      <option value="24">Entertainment</option>
-                      <option value="27">Education</option>
-                    </select>
-                  </div>
-                  <div className="space-y-1">
-                    <label className="text-xs text-slate-400 font-medium flex items-center gap-1"><Globe size={14}/> Privacy</label>
-                    <select name="privacy" value={formData.privacy} onChange={handleInputChange} className="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-white focus:border-purple-500 outline-none text-sm appearance-none">
-                      <option value="public">Public</option>
-                      <option value="unlisted">Unlisted</option>
-                      <option value="private">Private</option>
-                    </select>
-                  </div>
-                </div>
-                <div className="space-y-1">
-                  <label className="text-xs text-slate-400 font-medium flex items-center gap-1"><Tag size={14}/> Tags (comma separated)</label>
-                  <input type="text" name="tags" value={formData.tags} onChange={handleInputChange} placeholder="lofi, gaming, stream, 24/7" className="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-white focus:border-purple-500 outline-none text-sm" />
-                </div>
               </div>
             </div>
+
+            {/* Stream Metadata (Only for YouTube API) */}
+            {String(formData.use_custom_rtmp) !== 'true' && (
+              <div className="space-y-4">
+                <h4 className="text-sm font-bold text-purple-400 uppercase tracking-wider flex items-center gap-2 border-b border-slate-800 pb-2">
+                  <Settings size={16} /> Stream Metadata
+                </h4>
+                <div className="space-y-3">
+                  <div className="space-y-1">
+                    <label className="text-xs text-slate-400 font-medium flex items-center gap-1"><FileText size={14}/> Stream Title</label>
+                    <input type="text" name="title" value={formData.title} onChange={handleInputChange} placeholder="e.g. 24/7 Chill Lofi Beats" className="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-white focus:border-purple-500 outline-none text-sm" />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-xs text-slate-400 font-medium">Description</label>
+                    <textarea name="description" value={formData.description} onChange={handleInputChange} rows="3" placeholder="Stream description..." className="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-white focus:border-purple-500 outline-none text-sm resize-none" />
+                  </div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-1">
+                      <label className="text-xs text-slate-400 font-medium">Category</label>
+                      <select name="category" value={formData.category} onChange={handleInputChange} className="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-white focus:border-purple-500 outline-none text-sm appearance-none">
+                        <option value="20">Gaming</option>
+                        <option value="10">Music</option>
+                        <option value="24">Entertainment</option>
+                        <option value="27">Education</option>
+                      </select>
+                    </div>
+                    <div className="space-y-1">
+                      <label className="text-xs text-slate-400 font-medium flex items-center gap-1"><Globe size={14}/> Privacy</label>
+                      <select name="privacy" value={formData.privacy} onChange={handleInputChange} className="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-white focus:border-purple-500 outline-none text-sm appearance-none">
+                        <option value="public">Public</option>
+                        <option value="unlisted">Unlisted</option>
+                        <option value="private">Private</option>
+                      </select>
+                    </div>
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-xs text-slate-400 font-medium flex items-center gap-1"><Tag size={14}/> Tags (comma separated)</label>
+                    <input type="text" name="tags" value={formData.tags} onChange={handleInputChange} placeholder="lofi, gaming, stream, 24/7" className="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-white focus:border-purple-500 outline-none text-sm" />
+                  </div>
+                </div>
+              </div>
+            )}
 
             {/* Advanced FFmpeg Options */}
             <div className="space-y-4">
