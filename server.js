@@ -68,7 +68,10 @@ async function initDb() {
       thumbnail TEXT,
       status TEXT DEFAULT 'pending',
       broadcast_id TEXT,
-      stream_id TEXT
+      stream_id TEXT,
+      video_quality TEXT DEFAULT '720p',
+      background_music TEXT DEFAULT 'none',
+      loop_mode TEXT DEFAULT 'infinite'
     );
 
     CREATE TABLE IF NOT EXISTS accounts (
@@ -96,6 +99,9 @@ async function initDb() {
   try { await db.run('ALTER TABLE schedules ADD COLUMN status TEXT DEFAULT "pending"'); } catch { /* ignore */ }
   try { await db.run('ALTER TABLE schedules ADD COLUMN broadcast_id TEXT'); } catch { /* ignore */ }
   try { await db.run('ALTER TABLE schedules ADD COLUMN stream_id TEXT'); } catch { /* ignore */ }
+  try { await db.run('ALTER TABLE schedules ADD COLUMN video_quality TEXT DEFAULT "720p"'); } catch { /* ignore */ }
+  try { await db.run('ALTER TABLE schedules ADD COLUMN background_music TEXT DEFAULT "none"'); } catch { /* ignore */ }
+  try { await db.run('ALTER TABLE schedules ADD COLUMN loop_mode TEXT DEFAULT "infinite"'); } catch { /* ignore */ }
 
   console.log('Database SQLite initialized successfully.');
   
@@ -274,12 +280,12 @@ app.get('/api/schedules', async (req, res) => {
 
 app.post('/api/schedules', async (req, res) => {
   try {
-    const { id, title, startDate, startTime, endDate, endTime, accountId, mediaSource, description, category, tags, privacy, thumbnail } = req.body;
+    const { id, title, startDate, startTime, endDate, endTime, accountId, mediaSource, description, category, tags, privacy, thumbnail, video_quality, background_music, loop_mode } = req.body;
     await db.run(
       `INSERT OR REPLACE INTO schedules 
-      (id, title, startDate, startTime, endDate, endTime, accountId, mediaSource, description, category, tags, privacy, thumbnail) 
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-      [id, title, startDate, startTime, endDate, endTime, accountId, mediaSource, description, category, tags, privacy, thumbnail]
+      (id, title, startDate, startTime, endDate, endTime, accountId, mediaSource, description, category, tags, privacy, thumbnail, video_quality, background_music, loop_mode) 
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [id, title, startDate, startTime, endDate, endTime, accountId, mediaSource, description, category, tags, privacy, thumbnail, video_quality || '720p', background_music || 'none', loop_mode || 'infinite']
     );
     res.json({ message: 'Schedule saved' });
   } catch (error) {

@@ -23,6 +23,9 @@ export default function Schedule() {
   // To populate thumbnail dropdown
   const [images, setImages] = useState([]);
 
+  // To populate background music dropdown
+  const [audioFiles, setAudioFiles] = useState([]);
+
   // To populate accounts dropdown
   const [accounts, setAccounts] = useState([]);
 
@@ -39,7 +42,12 @@ export default function Schedule() {
 
     apiFetch('/api/files')
       .then(res => res.json())
-      .then(data => setImages(Array.isArray(data) ? data.filter(f => f.type === 'image') : []))
+      .then(data => {
+        if (Array.isArray(data)) {
+          setImages(data.filter(f => f.type === 'image'));
+          setAudioFiles(data.filter(f => f.type === 'audio'));
+        }
+      })
       .catch(console.error);
 
     apiFetch('/api/accounts')
@@ -65,7 +73,10 @@ export default function Schedule() {
     category: '20', // 20 is Gaming in YT API
     tags: '',
     privacy: 'public',
-    thumbnail: ''
+    thumbnail: '',
+    video_quality: '720p',
+    background_music: 'none',
+    loop_mode: 'infinite'
   };
   const [formData, setFormData] = useState(initialForm);
 
@@ -389,6 +400,40 @@ export default function Schedule() {
                 <div className="space-y-1">
                   <label className="text-xs text-slate-400 font-medium flex items-center gap-1"><Tag size={14}/> Tags (comma separated)</label>
                   <input type="text" name="tags" value={formData.tags} onChange={handleInputChange} placeholder="lofi, gaming, stream, 24/7" className="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-white focus:border-purple-500 outline-none text-sm" />
+                </div>
+              </div>
+            </div>
+
+            {/* Advanced FFmpeg Options */}
+            <div className="space-y-4">
+              <h4 className="text-sm font-bold text-purple-400 uppercase tracking-wider flex items-center gap-2 border-b border-slate-800 pb-2">
+                <Settings size={16} /> Advanced FFmpeg Options
+              </h4>
+              <div className="space-y-3">
+                <div className="space-y-1">
+                  <label className="text-xs text-slate-400 font-medium">Video Quality</label>
+                  <select name="video_quality" value={formData.video_quality || '720p'} onChange={handleInputChange} className="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-white focus:border-purple-500 outline-none text-sm appearance-none">
+                    <option value="1080p">1080p (Highest Quality, CPU Heavy)</option>
+                    <option value="720p">720p (Standard, Balanced)</option>
+                    <option value="480p">480p (Low Quality, CPU Saver)</option>
+                    <option value="copy">Passthrough / Copy (Zero CPU, Strict Format)</option>
+                  </select>
+                </div>
+                <div className="space-y-1">
+                  <label className="text-xs text-slate-400 font-medium">Background Music</label>
+                  <select name="background_music" value={formData.background_music || 'none'} onChange={handleInputChange} className="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-white focus:border-purple-500 outline-none text-sm appearance-none">
+                    <option value="none">-- No Background Music --</option>
+                    {audioFiles.map(aud => (
+                      <option key={aud.id} value={aud.id}>{aud.name}</option>
+                    ))}
+                  </select>
+                </div>
+                <div className="space-y-1">
+                  <label className="text-xs text-slate-400 font-medium">Loop Mode</label>
+                  <select name="loop_mode" value={formData.loop_mode || 'infinite'} onChange={handleInputChange} className="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-white focus:border-purple-500 outline-none text-sm appearance-none">
+                    <option value="infinite">Infinite Loop (24/7)</option>
+                    <option value="once">Play Once & Stop</option>
+                  </select>
                 </div>
               </div>
             </div>

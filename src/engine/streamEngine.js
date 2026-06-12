@@ -141,27 +141,63 @@ async function startStream(db, schedule) {
     
     fs.writeFileSync(listPath, listContent);
 
-    // 7. Launch FFmpeg
-    console.log('[ENGINE] Launching FFmpeg...');
+    // 7. Configure FFmpeg Options
+    console.log('[ENGINE] Configuring FFmpeg Options...');
     const fullRtmpUrl = `${rtmpUrl}/${streamName}`;
+    
+    const loopMode = schedule.loop_mode === 'once' ? '0' : '-1';
+    let inputOpts = ['-f', 'concat', '-safe', '0', '-re', '-stream_loop', loopMode];
+    let outputOpts = [];
 
-    const command = ffmpeg()
-      .input(listPath)
-      .inputOptions(['-f', 'concat', '-safe', '0', '-re', '-stream_loop', '-1'])
-      .outputOptions([
-        '-c:v', 'libx264',
-        '-preset', 'veryfast',
-        '-b:v', '2500k',
-        '-maxrate', '2500k',
-        '-bufsize', '5000k',
-        '-pix_fmt', 'yuv420p',
-        '-g', '60',
-        '-c:a', 'aac',
-        '-b:a', '128k',
-        '-ar', '44100',
-        '-f', 'flv'
-      ])
-      .output(fullRtmpUrl)
+    // Video Quality Setup
+    if (schedule.video_quality === 'copy') {
+      outputOpts = ['-c:v', 'copy', '-c:a', 'copy', '-f', 'flv'];
+    } else {
+      let vBitrate = '2500k';
+      let bufsize = '5000k';
+      
+      if (schedule.video_quality === '1080p') {
+        vBitrate = '4500k'; bufsize = '9000k';
+      } else if (schedule.video_quality === '480p') {
+        vBitrate = '1000k'; bufsize = '2000k';
+      }
+      
+      outputOpts = [
+        '-c:v', 'libx264', '-preset', 'veryfast',
+        '-b:v', vBitrate, '-maxrate', vBitrate, '-bufsize', bufsize,
+        '-pix_fmt', 'yuv420p', '-g', '60',
+        '-c:a', 'aac', '-b:a', '128k', '-ar', '44100', '-f', 'flv'
+      ];
+    }
+
+    let command = ffmpeg().input(listPath).inputOptions(inputOpts);
+
+    // Background Music Setup (Replace Audio)
+    if (schedule.background_music && schedule.background_music !== 'none') {
+      const audioFile = await db.get('SELECT * FROM files WHERE id = ?', [schedule.background_music]);
+      if (audioFile) {
+        const audioFilename = audioFile.url.split('/').pop();
+        const audioAbsPath = path.join(process.cwd(), 'uploads', audioFilename).replace(/\\/g, '/');
+        
+        command = command.input(audioAbsPath).inputOptions(['-stream_loop', '-1']);
+        
+        // If copy mode, we MUST transcode audio because we are mapping new audio
+        if (schedule.video_quality === 'copy') {
+          outputOpts = ['-c:v', 'copy', '-c:a', 'aac', '-b:a', '128k', '-ar', '44100', '-f', 'flv'];
+        }
+        
+        outputOpts.push('-map', '0:v:0');
+        outputOpts.push('-map', '1:a:0');
+        
+        // If not looping infinite, use -shortest so audio stops when video ends
+        if (loopMode === '0') {
+          outputOpts.push('-shortest');
+        }
+      }
+    }
+
+    console.log('[ENGINE] Launching FFmpeg...');
+    command = command.outputOptions(outputOpts).output(fullRtmpUrl)
       .on('start', async (cmdline) => {
         console.log('[FFMPEG] Started:', cmdline);
         await db.run('UPDATE schedules SET status = "live" WHERE id = ?', [schedule.id]);
