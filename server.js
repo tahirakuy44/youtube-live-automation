@@ -119,7 +119,23 @@ const storage = multer.diskStorage({
 const upload = multer({ storage: storage });
 
 // Provide static access to uploaded files
-app.use('/uploads', express.static(uploadDir));
+app.use('/uploads', express.static(path.join(process.cwd(), 'uploads')));
+
+// [API SECURITY MIDDLEWARE]
+// Melindungi seluruh akses ke /api agar hanya bisa diakses menggunakan Master API Key
+app.use('/api', (req, res, next) => {
+  // Pengecualian: Google Callback tidak menggunakan API Key
+  if (req.path === '/auth/youtube/callback') return next();
+
+  const apiKey = process.env.API_KEY || 'kunci_rahasia_admin_123';
+  const authHeader = req.headers['authorization'];
+  const providedKey = authHeader ? authHeader.split(' ')[1] : req.headers['x-api-key'];
+
+  if (!providedKey || providedKey !== apiKey) {
+    return res.status(401).json({ error: 'Unauthorized: Invalid or missing Master API Key' });
+  }
+  next();
+});
 
 // --- API ENDPOINTS ---
 

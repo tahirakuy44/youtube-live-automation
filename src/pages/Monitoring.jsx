@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Activity, Server, Cpu, HardDrive, Clock, StopCircle, RefreshCw, CheckCircle2, AlertCircle, Database } from 'lucide-react';
+import { apiFetch } from '../utils/api';
 import { ConfirmModal, AlertModal } from '../components/Modal';
 
 export default function Monitoring() {
@@ -15,8 +16,8 @@ export default function Monitoring() {
     if (showIndicator) setIsRefreshing(true);
     try {
       const [statsRes, schedRes] = await Promise.all([
-        fetch('/api/stats'),
-        fetch('/api/schedules')
+        apiFetch('/api/stats'),
+        apiFetch('/api/schedules')
       ]);
       const statsData = await statsRes.json();
       const schedData = await schedRes.json();
@@ -24,7 +25,7 @@ export default function Monitoring() {
       if(statsData.cpu) setStats(statsData);
       if(Array.isArray(schedData)) setSchedules(schedData);
     } catch (error) {
-      console.error('Failed to fetch monitoring data', error);
+      console.error('Failed to apiFetch monitoring data', error);
     }
     if (showIndicator) setIsRefreshing(false);
   };

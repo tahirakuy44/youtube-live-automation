@@ -69,6 +69,8 @@ export default function Media() {
       
       const xhr = new XMLHttpRequest();
       xhr.open('POST', '/api/upload', true);
+      const apiKey = localStorage.getItem('api_key');
+      if (apiKey) xhr.setRequestHeader('Authorization', `Bearer ${apiKey}`);
       
       xhr.upload.onprogress = (e) => {
         if (e.lengthComputable) {

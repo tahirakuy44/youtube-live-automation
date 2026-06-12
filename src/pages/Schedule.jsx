@@ -5,9 +5,9 @@ import {
 } from 'date-fns';
 import { 
   ChevronLeft, ChevronRight, Calendar as CalendarIcon, 
-  Clock, Video, User, Settings, X, Trash2, Tag, FileText, Globe,
-  Image as ImageIcon
+  Clock, Video, User, Plus, Trash2, Edit, Play, Square, Settings, Upload, Image as ImageIcon
 } from 'lucide-react';
+import { apiFetch } from '../utils/api';
 import { ConfirmModal, AlertModal } from '../components/Modal';
 
 export default function Schedule() {
@@ -26,22 +26,22 @@ export default function Schedule() {
   const [accounts, setAccounts] = useState([]);
 
   useEffect(() => {
-    fetch('/api/schedules')
+    apiFetch('/api/schedules')
       .then(res => res.json())
       .then(data => setSchedules(Array.isArray(data) ? data : []))
       .catch(console.error);
 
-    fetch('/api/playlists')
+    apiFetch('/api/playlists')
       .then(res => res.json())
       .then(data => setSavedPlaylists(Array.isArray(data) ? data : []))
       .catch(console.error);
 
-    fetch('/api/files')
+    apiFetch('/api/files')
       .then(res => res.json())
       .then(data => setImages(Array.isArray(data) ? data.filter(f => f.type === 'image') : []))
       .catch(console.error);
 
-    fetch('/api/accounts')
+    apiFetch('/api/accounts')
       .then(res => res.json())
       .then(data => setAccounts(Array.isArray(data) ? data : []))
       .catch(console.error);
@@ -205,7 +205,7 @@ export default function Schedule() {
 
     const payload = editingId ? { ...formData, id: editingId } : { ...formData, id: 'sch_' + Date.now() };
 
-    fetch('/api/schedules', {
+    apiFetch('/api/schedules', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(payload)

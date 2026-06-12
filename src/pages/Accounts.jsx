@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { MonitorPlay, Plus, Trash2, CheckCircle2, RefreshCw } from 'lucide-react';
+import { apiFetch } from '../utils/api';
 import { ConfirmModal, AlertModal } from '../components/Modal';
 
 export default function Accounts() {
@@ -11,8 +12,8 @@ export default function Accounts() {
   const [alertModal, setAlertModal] = useState({ isOpen: false, title: '', message: '' });
   const [connectModal, setConnectModal] = useState({ isOpen: false, clientId: '', clientSecret: '' });
 
-  const fetchAccounts = () => {
-    fetch('/api/accounts')
+  const apiFetchAccounts = () => {
+    apiFetch('/api/accounts')
       .then(data => {
         if (Array.isArray(data)) {
           setAccounts(data);
@@ -29,7 +30,7 @@ export default function Accounts() {
   };
 
   useEffect(() => {
-    fetchAccounts();
+    apiFetchAccounts();
   }, []);
 
   const handleConnectDynamic = async (e) => {
@@ -40,7 +41,7 @@ export default function Accounts() {
     }
 
     try {
-      const res = await fetch('/api/auth/youtube/url', {
+      const res = await apiFetch('/api/auth/youtube/url', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
