@@ -9,10 +9,14 @@ Semua permintaan API (kecuali proses *Upload* via `multipart/form-data`) harus m
 Setiap *Request* HTTP yang Anda kirimkan **WAJIB** menyertakan *Header* berikut:
 
 ```http
-Authorization: Bearer ISI_DENGAN_API_KEY_DARI_ENV
+Authorization: Bearer ISI_DENGAN_API_KEY_ATAU_JWT_TOKEN
 ```
 
-Jika tidak disertakan atau salah, server akan merespon dengan `HTTP 401 Unauthorized`.
+> **Catatan Multi-Tenant:**
+> - Jika Anda menggunakan **Master API Key** dari `.env` secara langsung, Anda akan diidentifikasi sebagai super admin yang bebas mengambil dan menghapus data apa saja. (Bypass)
+> - Klien/Penyewa akan mendapatkan **JWT Token** (berisi nama pengguna/`user_id`) setelah login. Jika mereka menggunakan JWT tersebut, API hanya akan menampilkan dan mengubah data milik `user_id` yang tertera pada token tersebut demi menjaga privasi.
+
+Jika tidak disertakan, kedaluwarsa, atau salah, server akan merespon dengan `HTTP 401 Unauthorized`.
 
 ---
 
@@ -30,6 +34,22 @@ Mengambil data sumber daya peladen secara waktu nyata (CPU, RAM, Hard Disk, Upti
   "uptime": "2 Days, 5 Hours",
   "activeStreams": 2
 }
+```
+
+---
+
+### `GET /api/logs`
+Mengambil hingga 500 riwayat (*logs*) proses sistem yang terjadi di *backend*, seperti keberhasilan siaran, *error upload*, atau *error* jaringan.
+
+**Response (200 OK):**
+```json
+[
+  {
+    "timestamp": "2026-06-13T02:00:00.000Z",
+    "type": "INFO",
+    "message": "[ENGINE] Starting stream for schedule 123..."
+  }
+]
 ```
 
 ---

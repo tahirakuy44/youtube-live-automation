@@ -49,6 +49,9 @@ Sistem ini didesain menggunakan **React.js** untuk antarmuka pengguna yang moder
 4. **File & Playlist Manager Independen:**
    Halaman media yang bergaya "Google Drive", memungkinkan Anda mengelompokkan berbagai file video promosi atau latar belakang siaran ke dalam sistem "Playlist".
 
+5. **Arsitektur Multi-Tenant (Privasi Ketat):**
+   Aplikasi ini dirancang untuk dapat melayani banyak penyewa (*renter*) dalam satu instance server (SaaS). Semua data jadwal, video, dan kredensial YouTube difilter menggunakan Token Kriptografi (HMAC-SHA256) sehingga User A dipastikan tidak akan bisa melihat atau mengganggu data milik User B.
+
 ---
 
 ## 🛠️ Panduan Instalasi & Menjalankan Aplikasi
@@ -72,11 +75,11 @@ Sistem ini didesain menggunakan **React.js** untuk antarmuka pengguna yang moder
 
 ## 🗄️ Skema Database (SQLite)
 
-- **`accounts`**: Menyimpan ID, Nama YouTube Asli, *Avatar*, *Tokens JSON*, `client_id`, dan `client_secret`.
-- **`files`**: Melacak nama file yang terunggah (berada di folder `/uploads`), ukuran, tipe, dan url lokal.
-- **`playlists`**: Menyimpan *array JSON* berisi deretan media yang sudah dirakit.
-- **`schedules`**: Mencatat waktu *Start* dan *End*, referensi akun, referensi Playlist, dan yang terpenting: status saat ini (`pending`, `starting`, `live`, `completed`, `error`).
-- **`oauth_sessions`**: Penyimpanan transit rahasia agar proses Google OAuth dapat bekerja untuk sistem multi-klien.
+- **`accounts`**: Menyimpan ID, Nama YouTube Asli, *Avatar*, *Tokens JSON*, `client_id`, `client_secret`, dan `user_id`.
+- **`files`**: Melacak nama file yang terunggah (berada di folder `/uploads`), ukuran, tipe, url lokal, dan `user_id`.
+- **`playlists`**: Menyimpan *array JSON* berisi deretan media yang sudah dirakit dan `user_id`.
+- **`schedules`**: Mencatat waktu *Start* dan *End*, referensi akun, referensi Playlist, `user_id`, dan yang terpenting: status saat ini (`pending`, `starting`, `live`, `completed`, `error`).
+- **`oauth_sessions`**: Penyimpanan transit rahasia agar proses Google OAuth dapat bekerja untuk sistem multi-klien (disertai `user_id`).
 
 ---
 *Didesain dan dibangun dengan kecintaan tingkat tinggi pada keindahan arsitektur.*

@@ -67,3 +67,21 @@ Sebelum diunggah, kita harus memadatkan file antarmuka (React) Anda:
 ### Catatan Penting untuk Sistem "Background Music" & "Copy Quality"
 - Opsi `Video Quality: Copy` pada *Live Schedule* tidak menggunakan CPU, tapi menuntut spesifikasi video di *playlist* untuk identik secara dimensi dan FPS. Jika tidak, mesin siaran akan putus di tengah jalan.
 - File-file *Video* dan *Background Music* yang diunggah akan tersimpan di dalam folder `uploads` pada VPS. Pastikan VPS Anda memiliki ruang penyimpanan (Disk Space) yang cukup jika banyak pelanggan yang mengunggah video.
+
+---
+
+### 🚨 Troubleshooting (Daftar Masalah yang Pernah Diperbaiki)
+
+Selama pengembangan, kami pernah menghadapi dan menambal celah-celah *error* krusial berikut. Jika di masa depan Anda mengembangkan ulang aplikasi ini, harap perhatikan poin ini:
+
+1. **Bug: Kategori YouTube (*Category ID*) tidak terunggah saat membuat jadwal baru.**
+   - **Penyebab:** Dokumentasi YouTube Data API tidak mengizinkan kita menyisipkan `categoryId` secara langsung bersamaan dengan pembuatan `liveBroadcasts.insert` (Status Code 400).
+   - **Solusinya:** Kategori dan *Tags* disisipkan melalui panggilan fungsi terpisah (`youtube.videos.update`) **setelah** jadwal (*Broadcast*) berhasil dibuat. (Kode perbaikan ini ada di `src/engine/streamEngine.js`).
+
+2. **Celah Keamanan: Privasi Penyewa Bocor (Semua Jadwal Campur Aduk).**
+   - **Penyebab:** Aplikasi awalnya berjalan secara *Single-Tenant* dengan menggunakan satu `API_KEY` master di semua klien yang meminjam *server* `livepush.web.id`. Ini membuat User A bisa melihat akun YouTube User B.
+   - **Solusinya:** Migrasi ke arsitektur **Multi-Tenant (SaaS)** secara penuh. Penambahan kolom `user_id` di *database* SQLite. *Backend* `server.js` dimodifikasi agar menerbitkan *JWT Token* (berbasis HMAC kriptografi) pada saat *login* yang mengikat *username* penyewa. Semua pengambilan dan penghapusan tabel API difilter secara ketat dengan `WHERE user_id = ?`.
+
+3. **Bug: Sidebar Selalu Muncul "Admin" Walau Penyewa Berbeda.**
+   - **Penyebab:** Teks tersebut di-*hardcode* atau tertinggal dalam sesi penjelajah (*browser*) lama.
+   - **Solusinya:** Menambahkan mekanisme penyimpanan identitas di `Login.jsx` (`localStorage.setItem('username', ...)`) dan mengubah `Layout.jsx` untuk menampilkannya secara dinamis. Pastikan pengguna me-*logout* akun lama mereka setelah aplikasi diperbarui.

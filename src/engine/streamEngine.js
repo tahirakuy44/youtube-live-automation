@@ -21,8 +21,8 @@ export const initStreamEngine = (db) => {
       
       for (const schedule of activeSchedules) {
         // Parse start date time
-        const startDateTime = new Date(`${schedule.start_date}T${schedule.start_time}:00`);
-        const endDateTime = new Date(`${schedule.end_date}T${schedule.end_time}:00`);
+        const startDateTime = new Date(`${schedule.startDate}T${schedule.startTime}:00`);
+        const endDateTime = new Date(`${schedule.endDate}T${schedule.endTime}:00`);
         
         // 1. Check if it's time to STOP
         if (now >= endDateTime && schedule.status === "live") {
@@ -68,7 +68,7 @@ async function startStream(db, schedule) {
     }
 
     // 2. Fetch Account credentials (YouTube API Flow)
-    const account = await db.get('SELECT * FROM accounts WHERE id = ?', [schedule.account_id]);
+    const account = await db.get('SELECT * FROM accounts WHERE id = ?', [schedule.accountId]);
     if (!account) throw new Error('Account not found');
 
     const tokens = JSON.parse(account.credentials_json);
@@ -108,9 +108,9 @@ async function startStream(db, schedule) {
       requestBody: {
         snippet: { title: `Stream for ${schedule.title}` },
         cdn: {
-          frameRate: '30fps',
+          frameRate: 'variable',
           ingestionType: 'rtmp',
-          resolution: '1080p'
+          resolution: 'variable'
         }
       }
     });
@@ -126,6 +126,47 @@ async function startStream(db, schedule) {
       id: broadcastId,
       streamId: streamId
     });
+
+    // 6. Update Video Category and Tags
+    try {
+      console.log('[ENGINE] Updating Video Category and Tags...');
+      const tagsArray = schedule.tags ? schedule.tags.split(',').map(t => t.trim()).filter(Boolean) : [];
+      await youtube.videos.update({
+        part: 'snippet',
+        requestBody: {
+          id: broadcastId,
+          snippet: {
+            title: schedule.title,
+            description: schedule.description || 'Live stream powered by Live Terjadwal',
+            categoryId: schedule.category || '24',
+            tags: tagsArray
+          }
+        }
+      });
+      console.log('[ENGINE] Category and Tags updated successfully.');
+    } catch (updateErr) {
+      console.warn('[ENGINE] Failed to update category/tags:', updateErr.message);
+    }
+
+    // Upload Thumbnail if exists
+    if (schedule.thumbnail) {
+      try {
+        const thumbFile = await db.get('SELECT url FROM files WHERE id = ?', [schedule.thumbnail]);
+        if (thumbFile) {
+          const thumbPath = path.join(process.cwd(), thumbFile.url);
+          if (fs.existsSync(thumbPath)) {
+            console.log('[ENGINE] Uploading Custom Thumbnail to YouTube...');
+            await youtube.thumbnails.set({
+              videoId: broadcastId,
+              media: { body: fs.createReadStream(thumbPath) }
+            });
+            console.log('[ENGINE] Thumbnail uploaded successfully.');
+          }
+        }
+      } catch (thumbErr) {
+        console.error('[ENGINE] Failed to upload thumbnail:', thumbErr.message);
+      }
+    }
 
     // Save mapping to DB
     await db.run('UPDATE schedules SET broadcast_id = ?, stream_id = ?, rtmp_url = ?, stream_name = ? WHERE id = ?', 
@@ -158,7 +199,7 @@ async function launchFFmpeg(db, schedule, rtmpUrl, streamName) {
   try {
     // 6. Build the random playlist
     console.log(`[ENGINE] Building Playlist for schedule ${schedule.id}...`);
-    const playlist = await db.get('SELECT * FROM playlists WHERE id = ?', [schedule.media_source]);
+    const playlist = await db.get('SELECT * FROM playlists WHERE id = ?', [schedule.mediaSource]);
     if (!playlist) throw new Error('Playlist not found');
 
     const items = JSON.parse(playlist.items);
@@ -261,8 +302,13 @@ async function launchFFmpeg(db, schedule, rtmpUrl, streamName) {
         await db.run('UPDATE schedules SET status = "live" WHERE id = ?', [schedule.id]);
       })
       .on('error', async (err) => {
-        console.error('[FFMPEG] Error:', err.message);
-        await db.run('UPDATE schedules SET status = "error" WHERE id = ?', [schedule.id]);
+        if (err.message.includes('SIGKILL') || err.message.includes('killed')) {
+          console.log('[FFMPEG] Process was intentionally stopped (SIGKILL). Marking as completed.');
+          await db.run('UPDATE schedules SET status = "completed" WHERE id = ?', [schedule.id]);
+        } else {
+          console.error('[FFMPEG] Error:', err.message);
+          await db.run('UPDATE schedules SET status = "error" WHERE id = ?', [schedule.id]);
+        }
         activeStreams.delete(schedule.id);
       })
       .on('end', async () => {

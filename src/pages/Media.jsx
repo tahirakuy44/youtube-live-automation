@@ -293,9 +293,10 @@ export default function Media() {
         </div>
       </div>
 
-      <div className="flex gap-6 flex-1 min-h-0">
-        {/* Left Sidebar */}
-        <div className="w-64 shrink-0 flex flex-col gap-4">
+      <div className="h-full flex flex-col md:flex-row gap-6 relative animate-in fade-in duration-500">
+      
+      {/* Sidebar Folders */}
+      <div className="w-full md:w-64 glass-panel rounded-2xl flex flex-col overflow-hidden shrink-0 h-64 md:h-auto">
           <div className="glass-panel p-4 rounded-2xl flex-1 overflow-y-auto">
             <h2 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-4 px-2">Directories</h2>
             <ul className="space-y-1 mb-6">
@@ -420,7 +421,7 @@ export default function Media() {
                         {file.type === 'video' && <Film size={32} className="text-slate-600" />}
                         {file.type === 'audio' && <Music size={32} className="text-blue-900/50" />}
                         {file.type === 'image' && (
-                           file.url ? <img src={`http://localhost:3001${file.url}`} alt={file.name} className="object-cover w-full h-full opacity-60" /> : <ImageIcon size={32} className="text-slate-600" />
+                           file.url ? <img src={file.url} alt={file.name} className="object-cover w-full h-full opacity-60" /> : <ImageIcon size={32} className="text-slate-600" />
                         )}
                         {file.type === 'unknown' && <Folder size={32} className="text-slate-700" />}
                         {(file.type === 'video' || file.type === 'audio') && (

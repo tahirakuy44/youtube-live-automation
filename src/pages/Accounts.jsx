@@ -14,6 +14,7 @@ export default function Accounts() {
 
   const apiFetchAccounts = () => {
     apiFetch('/api/accounts')
+      .then(res => res.json())
       .then(data => {
         if (Array.isArray(data)) {
           setAccounts(data);

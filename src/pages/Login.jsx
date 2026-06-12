@@ -38,8 +38,9 @@ export default function Login() {
       const data = await res.json();
 
       if (res.ok && data.apiKey) {
-        // Jika server utama menyetujui, kita dapat Master API Key secara rahasia
+        // Jika server utama menyetujui, kita dapat Master API Key / Token secara rahasia
         localStorage.setItem('api_key', data.apiKey);
+        localStorage.setItem('username', username.trim());
         navigate('/monitoring');
       } else {
         setError(data.error || 'Invalid credentials');
@@ -47,7 +48,7 @@ export default function Login() {
     } catch (err) {
       setError('Network error or proxy server is down. ' + err.message);
     }
-    
+
     setIsLoading(false);
   };
 
@@ -63,7 +64,7 @@ export default function Login() {
             <ShieldCheck size={48} className="text-purple-400" />
           </div>
         </div>
-        
+
         <h1 className="text-3xl font-bold text-slate-100 mb-2 text-center">
           Login Portal
         </h1>
@@ -76,8 +77,8 @@ export default function Login() {
             <label className="text-sm font-medium text-slate-300 mb-2 flex items-center gap-2">
               <User size={16} className="text-pink-400" /> Username
             </label>
-            <input 
-              type="text" 
+            <input
+              type="text"
               value={username}
               onChange={(e) => setUsername(e.target.value)}
               className="w-full bg-slate-900/50 border border-slate-700 rounded-xl px-4 py-3 text-slate-200 focus:outline-none focus:border-purple-500 focus:ring-1 focus:ring-purple-500 transition-all"
@@ -90,8 +91,8 @@ export default function Login() {
             <label className="text-sm font-medium text-slate-300 mb-2 flex items-center gap-2">
               <Lock size={16} className="text-purple-400" /> Password
             </label>
-            <input 
-              type="password" 
+            <input
+              type="password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               className="w-full bg-slate-900/50 border border-slate-700 rounded-xl px-4 py-3 text-slate-200 focus:outline-none focus:border-purple-500 focus:ring-1 focus:ring-purple-500 transition-all"
@@ -106,7 +107,7 @@ export default function Login() {
             </div>
           )}
 
-          <button 
+          <button
             type="submit"
             disabled={isLoading}
             className="w-full bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-500 hover:to-pink-500 text-white font-bold py-3 rounded-xl transition-all shadow-[0_0_20px_rgba(168,85,247,0.4)] hover:shadow-[0_0_30px_rgba(168,85,247,0.6)] disabled:opacity-50 disabled:cursor-not-allowed flex justify-center items-center gap-2"

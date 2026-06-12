@@ -145,43 +145,66 @@ export default function Schedule() {
         const dayString = format(cloneDay, 'yyyy-MM-dd');
         const daySchedules = schedules.filter(sch => sch.startDate === dayString);
 
+        const firstSchWithThumb = daySchedules.find(sch => sch.thumbnail && images.find(img => img.id === sch.thumbnail));
+        const dayBgUrl = firstSchWithThumb ? images.find(img => img.id === firstSchWithThumb.thumbnail).url : null;
+
         days.push(
           <div 
-            key={day} 
-            className={`min-h-[120px] p-2 border-r border-b border-slate-700/50 hover:bg-slate-800/80 cursor-pointer transition-all relative flex flex-col gap-1 ${
-              !isSameMonth(day, monthStart) ? "text-slate-600 bg-slate-900/30" : "text-slate-300 bg-slate-800/20"
-            }`}
-            onClick={() => handleDateClick(cloneDay)}
-          >
-            <div className="flex justify-between items-start">
-              <span className={`text-sm font-bold w-7 h-7 flex items-center justify-center rounded-full ${
-                isSameDay(day, new Date()) ? "bg-purple-600 text-white shadow-[0_0_10px_rgba(168,85,247,0.5)]" : ""
-              }`}>
-                {formattedDate}
-              </span>
-            </div>
-            
-            <div className="flex-1 overflow-y-auto mt-1 space-y-1 scrollbar-hide">
-              {daySchedules.map(sch => (
-                <div 
-                  key={sch.id}
-                  onClick={(e) => { e.stopPropagation(); openEditDrawer(sch); }}
-                  className="bg-slate-900/80 border-l-2 border-purple-500 text-slate-300 text-xs px-2 py-1.5 rounded-r truncate hover:bg-slate-800 hover:text-white transition-colors flex flex-col shadow-sm"
-                  title={sch.title}
-                >
-                  <span className="font-semibold truncate text-purple-300">{sch.startTime} - {sch.endTime}</span>
-                  <span className="truncate">{sch.title}</span>
+              key={day} 
+              className={`h-[150px] p-2 border-r border-b border-slate-700/50 cursor-pointer transition-all relative flex flex-col gap-1 group/day overflow-hidden ${
+                !isSameMonth(day, monthStart) ? "text-slate-600 bg-slate-900/30" : "text-slate-300 bg-slate-800/40 hover:bg-slate-800/60"
+              }`}
+              onClick={() => handleDateClick(cloneDay)}
+            >
+              {dayBgUrl && (
+                <div className="absolute inset-0 w-full h-full pointer-events-none z-0">
+                  <img src={dayBgUrl} alt="bg" className="w-full h-full object-cover opacity-50 group-hover/day:scale-110 group-hover/day:opacity-70 transition-all duration-700 ease-out" />
+                  <div className="absolute inset-0 bg-gradient-to-b from-slate-900/80 via-transparent to-slate-900/95"></div>
                 </div>
-              ))}
+              )}
+              
+              <div className="flex justify-between items-start z-10 relative shrink-0">
+                <span className={`text-sm font-bold w-8 h-8 flex items-center justify-center rounded-full drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)] ${
+                  isSameDay(day, new Date()) ? "bg-purple-600 text-white shadow-[0_0_15px_rgba(168,85,247,0.8)]" : "text-white bg-slate-900/40 backdrop-blur-sm"
+                }`}>
+                  {formattedDate}
+                </span>
+              </div>
+              
+              <div className="flex-1 overflow-y-auto mt-1 space-y-1 z-10 relative flex flex-col justify-start pb-1">
+                {daySchedules.map(sch => (
+                  <div 
+                    key={sch.id}
+                    onClick={(e) => { e.stopPropagation(); openEditDrawer(sch); }}
+                    className="group/item border-l-2 border-purple-500 text-slate-300 text-xs rounded-r overflow-hidden hover:text-white transition-colors flex flex-col shadow-[0_2px_8px_rgba(0,0,0,0.5)] cursor-pointer px-2 py-1.5 bg-slate-900/60 hover:bg-purple-900/80 backdrop-blur-md relative"
+                    title={sch.title}
+                  >
+                    <span className="font-bold truncate text-purple-300 drop-shadow-md pr-6">{sch.startTime} - {sch.endTime}</span>
+                    <span className="truncate drop-shadow-md font-semibold text-slate-50">{sch.title}</span>
+                    <button 
+                      onClick={(e) => handleDeleteDirect(e, sch.id)}
+                      className="absolute top-1/2 -translate-y-1/2 right-2 bg-red-600/80 hover:bg-red-500 text-white p-1 rounded-full opacity-0 group-hover/item:opacity-100 transition-all scale-75 hover:scale-100 shadow-lg"
+                      title="Delete Schedule"
+                    >
+                      <Trash2 size={14} />
+                    </button>
+                  </div>
+                ))}
+              </div>
             </div>
-          </div>
-        );
+          );
         day = addDays(day, 1);
       }
       rows.push(<div className="grid grid-cols-7" key={day}>{days}</div>);
       days = [];
     }
-    return <div className="border-t border-l border-slate-700/50 rounded-xl overflow-hidden glass-panel">{rows}</div>;
+    return (
+      <div className="overflow-x-auto w-full rounded-xl border border-slate-700/50 glass-panel">
+        <div className="min-w-[800px]">
+          {rows}
+        </div>
+      </div>
+    );
   };
 
   // --- Handlers ---
@@ -256,11 +279,30 @@ export default function Schedule() {
       title: 'Delete Schedule',
       message: 'Are you sure you want to delete this scheduled live stream?',
       action: () => {
-        fetch(`/api/schedules/${editingId}`, { method: 'DELETE' }).then(() => {
+        apiFetch(`/api/schedules/${editingId}`, { method: 'DELETE' }).then(() => {
           setSchedules(schedules.filter(s => s.id !== editingId));
           setConfirmModal({ isOpen: false });
           setIsDrawerOpen(false);
         }).catch(console.error);
+      }
+    });
+  };
+
+  const handleDeleteDirect = (e, id) => {
+    e.stopPropagation();
+    setConfirmModal({
+      isOpen: true,
+      title: 'Delete Schedule',
+      message: 'Are you sure you want to delete this scheduled live stream? It will be removed from the database permanently.',
+      action: () => {
+        apiFetch(`/api/schedules/${id}`, { method: 'DELETE' }).then(() => {
+          setSchedules(prev => prev.filter(s => s.id !== id));
+          setConfirmModal({ isOpen: false });
+          if (editingId === id) setIsDrawerOpen(false);
+        }).catch(err => {
+          setAlertModal({ isOpen: true, title: 'Error', message: err.message });
+          setConfirmModal({ isOpen: false });
+        });
       }
     });
   };
@@ -288,8 +330,8 @@ export default function Schedule() {
 
       {/* Slide-out Drawer for Schedule Form */}
       {isDrawerOpen && (
-        <div className="absolute top-0 right-0 bottom-0 w-[500px] glass-panel border-l border-slate-700/50 shadow-2xl flex flex-col z-20 animate-in slide-in-from-right-8 duration-300">
-          <div className="p-6 border-b border-slate-700/50 flex justify-between items-center bg-slate-900/80 shrink-0">
+        <div className={`fixed inset-y-0 right-0 w-full md:w-[500px] bg-slate-900 border-l border-slate-800 shadow-2xl z-50 flex flex-col transform transition-transform duration-300 ease-in-out ${isDrawerOpen ? 'translate-x-0' : 'translate-x-full'}`}>
+          <div className="p-4 md:p-6 border-b border-slate-800 bg-slate-900/80 backdrop-blur-md flex items-center justify-between sticky top-0 z-20 shrink-0">
             <h3 className="font-bold text-xl text-slate-100 flex items-center gap-2">
               <CalendarIcon className="text-purple-400" size={24} /> 
               {editingId ? 'Edit Schedule' : 'New Schedule'}
@@ -378,7 +420,7 @@ export default function Schedule() {
                     {formData.thumbnail && images.find(img => img.id === formData.thumbnail)?.url ? (
                       <div className="w-24 h-16 bg-slate-900 rounded border border-slate-700 overflow-hidden shrink-0 shadow-inner">
                         <img 
-                          src={`http://localhost:3001${images.find(img => img.id === formData.thumbnail).url}`} 
+                          src={images.find(img => img.id === formData.thumbnail).url} 
                           className="w-full h-full object-cover" 
                           alt="Thumbnail Preview" 
                         />
