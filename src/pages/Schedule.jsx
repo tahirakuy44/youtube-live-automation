@@ -400,9 +400,6 @@ export default function Schedule() {
               </div>
             </div>
 
-              </div>
-            </div>
-
             {/* Stream Metadata (Only for YouTube API) */}
             {String(formData.use_custom_rtmp) !== 'true' && (
               <div className="space-y-4">
