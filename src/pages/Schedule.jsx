@@ -24,7 +24,7 @@ export default function Schedule() {
   const [images, setImages] = useState([]);
 
   // To populate background music dropdown
-  const [audioFiles, setAudioFiles] = useState([]);
+  // Removed audioFiles state since we are using Playlists now
 
   // To populate accounts dropdown
   const [accounts, setAccounts] = useState([]);
@@ -45,7 +45,6 @@ export default function Schedule() {
       .then(data => {
         if (Array.isArray(data)) {
           setImages(data.filter(f => f.type === 'image'));
-          setAudioFiles(data.filter(f => f.type === 'audio'));
         }
       })
       .catch(console.error);
@@ -420,11 +419,11 @@ export default function Schedule() {
                   </select>
                 </div>
                 <div className="space-y-1">
-                  <label className="text-xs text-slate-400 font-medium">Background Music</label>
+                  <label className="text-xs text-slate-400 font-medium">Background Music (Audio Playlist)</label>
                   <select name="background_music" value={formData.background_music || 'none'} onChange={handleInputChange} className="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-white focus:border-purple-500 outline-none text-sm appearance-none">
                     <option value="none">-- No Background Music --</option>
-                    {audioFiles.map(aud => (
-                      <option key={aud.id} value={aud.id}>{aud.name}</option>
+                    {savedPlaylists.map(pl => (
+                      <option key={pl.id} value={pl.id}>{pl.name} ({pl.items.length} items)</option>
                     ))}
                   </select>
                 </div>

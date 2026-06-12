@@ -172,26 +172,41 @@ async function startStream(db, schedule) {
 
     let command = ffmpeg().input(listPath).inputOptions(inputOpts);
 
-    // Background Music Setup (Replace Audio)
+    // Background Music Setup (Replace Audio with Audio Playlist)
     if (schedule.background_music && schedule.background_music !== 'none') {
-      const audioFile = await db.get('SELECT * FROM files WHERE id = ?', [schedule.background_music]);
-      if (audioFile) {
-        const audioFilename = audioFile.url.split('/').pop();
-        const audioAbsPath = path.join(process.cwd(), 'uploads', audioFilename).replace(/\\/g, '/');
+      const audioPlaylist = await db.get('SELECT * FROM playlists WHERE id = ?', [schedule.background_music]);
+      if (audioPlaylist) {
+        const audioItems = JSON.parse(audioPlaylist.items);
+        const audios = audioItems.filter(item => item.type === 'audio');
         
-        command = command.input(audioAbsPath).inputOptions(['-stream_loop', '-1']);
-        
-        // If copy mode, we MUST transcode audio because we are mapping new audio
-        if (schedule.video_quality === 'copy') {
-          outputOpts = ['-c:v', 'copy', '-c:a', 'aac', '-b:a', '128k', '-ar', '44100', '-f', 'flv'];
-        }
-        
-        outputOpts.push('-map', '0:v:0');
-        outputOpts.push('-map', '1:a:0');
-        
-        // If not looping infinite, use -shortest so audio stops when video ends
-        if (loopMode === '0') {
-          outputOpts.push('-shortest');
+        if (audios.length > 0) {
+          // Shuffle audio tracks randomly
+          const shuffledAudios = audios.sort(() => 0.5 - Math.random());
+          
+          // Create concat.txt for audio
+          const audioListPath = path.join(process.cwd(), 'uploads', `audio_list_${schedule.id}.txt`);
+          const audioListContent = shuffledAudios.map(a => {
+            const filename = a.url.split('/').pop();
+            const absPath = path.join(process.cwd(), 'uploads', filename).replace(/\\/g, '/');
+            return `file '${absPath}'`;
+          }).join('\n');
+          fs.writeFileSync(audioListPath, audioListContent);
+          
+          // Pass audio list as second input
+          command = command.input(audioListPath).inputOptions(['-f', 'concat', '-safe', '0', '-re', '-stream_loop', '-1']);
+          
+          // If copy mode, we MUST transcode audio because we are mapping new audio
+          if (schedule.video_quality === 'copy') {
+            outputOpts = ['-c:v', 'copy', '-c:a', 'aac', '-b:a', '128k', '-ar', '44100', '-f', 'flv'];
+          }
+          
+          outputOpts.push('-map', '0:v:0');
+          outputOpts.push('-map', '1:a:0');
+          
+          // If not looping infinite, use -shortest so audio stops when video ends
+          if (loopMode === '0') {
+            outputOpts.push('-shortest');
+          }
         }
       }
     }
