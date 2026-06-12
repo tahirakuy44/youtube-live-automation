@@ -1,17 +1,18 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { KeyRound, ShieldCheck } from 'lucide-react';
+import { ShieldCheck, User, Lock } from 'lucide-react';
 
 export default function Login() {
-  const [apiKey, setApiKey] = useState('');
+  const [username, setUsername] = useState('');
+  const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const navigate = useNavigate();
 
   const handleLogin = async (e) => {
     e.preventDefault();
-    if (!apiKey.trim()) {
-      setError('Master API Key is required');
+    if (!username.trim() || !password.trim()) {
+      setError('Username and Password are required');
       return;
     }
 
@@ -19,22 +20,25 @@ export default function Login() {
     setError('');
 
     try {
-      // Test the API key by fetching a lightweight endpoint
-      const res = await fetch('/api/stats', {
-        headers: {
-          'Authorization': `Bearer ${apiKey.trim()}`
-        }
+      // Mengirim kredensial ke Backend Node.js kita, 
+      // yang mana Node.js kita akan meneruskannya ke Server Utama Anda (Laravel dll)
+      const res = await fetch('/api/auth/external-login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username: username.trim(), password: password.trim() })
       });
 
-      if (res.ok) {
-        // Save to localStorage and redirect
-        localStorage.setItem('api_key', apiKey.trim());
+      const data = await res.json();
+
+      if (res.ok && data.apiKey) {
+        // Jika server utama menyetujui, kita dapat Master API Key secara rahasia
+        localStorage.setItem('api_key', data.apiKey);
         navigate('/monitoring');
       } else {
-        setError('Invalid Master API Key. Access Denied.');
+        setError(data.error || 'Invalid credentials');
       }
     } catch (err) {
-      setError('Network error or server is down. ' + err.message);
+      setError('Network error or proxy server is down. ' + err.message);
     }
     
     setIsLoading(false);
@@ -54,23 +58,37 @@ export default function Login() {
         </div>
         
         <h1 className="text-3xl font-bold text-slate-100 mb-2 text-center">
-          Secure Access
+          Login Portal
         </h1>
         <p className="text-slate-400 text-center text-sm mb-8">
-          Enter your Master API Key to control the Engine.
+          Masuk dengan akun yang terdaftar di Web Server Utama Anda.
         </p>
 
         <form onSubmit={handleLogin} className="space-y-5">
           <div>
             <label className="text-sm font-medium text-slate-300 mb-2 flex items-center gap-2">
-              <KeyRound size={16} className="text-pink-400" /> Master API Key
+              <User size={16} className="text-pink-400" /> Username
+            </label>
+            <input 
+              type="text" 
+              value={username}
+              onChange={(e) => setUsername(e.target.value)}
+              className="w-full bg-slate-900/50 border border-slate-700 rounded-xl px-4 py-3 text-slate-200 focus:outline-none focus:border-purple-500 focus:ring-1 focus:ring-purple-500 transition-all"
+              placeholder="Masukkan username"
+              disabled={isLoading}
+            />
+          </div>
+
+          <div>
+            <label className="text-sm font-medium text-slate-300 mb-2 flex items-center gap-2">
+              <Lock size={16} className="text-purple-400" /> Password
             </label>
             <input 
               type="password" 
-              value={apiKey}
-              onChange={(e) => setApiKey(e.target.value)}
-              className="w-full bg-slate-900/50 border border-slate-700 rounded-xl px-4 py-3 text-slate-200 focus:outline-none focus:border-purple-500 focus:ring-1 focus:ring-purple-500 transition-all text-center tracking-widest font-mono"
-              placeholder="••••••••••••••••"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              className="w-full bg-slate-900/50 border border-slate-700 rounded-xl px-4 py-3 text-slate-200 focus:outline-none focus:border-purple-500 focus:ring-1 focus:ring-purple-500 transition-all"
+              placeholder="••••••••••••"
               disabled={isLoading}
             />
           </div>
@@ -87,9 +105,9 @@ export default function Login() {
             className="w-full bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-500 hover:to-pink-500 text-white font-bold py-3 rounded-xl transition-all shadow-[0_0_20px_rgba(168,85,247,0.4)] hover:shadow-[0_0_30px_rgba(168,85,247,0.6)] disabled:opacity-50 disabled:cursor-not-allowed flex justify-center items-center gap-2"
           >
             {isLoading ? (
-              <span className="animate-pulse">Verifying...</span>
+              <span className="animate-pulse">Menghubungi Server Eksternal...</span>
             ) : (
-              'Unlock Engine'
+              'Login'
             )}
           </button>
         </form>

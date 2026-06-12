@@ -66,9 +66,9 @@ export default function Accounts() {
       title: 'Disconnect Account',
       message: 'Are you sure you want to disconnect this YouTube account? Scheduled streams using this account will fail.',
       action: () => {
-        fetch(`/api/accounts/${id}`, { method: 'DELETE' })
+        apiFetch(`/api/accounts/${id}`, { method: 'DELETE' })
           .then(() => {
-            fetchAccounts();
+            apiFetchAccounts();
             setConfirmModal({ isOpen: false });
           })
           .catch(console.error);

@@ -121,11 +121,44 @@ const upload = multer({ storage: storage });
 // Provide static access to uploaded files
 app.use('/uploads', express.static(path.join(process.cwd(), 'uploads')));
 
+// [EXTERNAL AUTH PROXY]
+// Mengirimkan kredensial ke server pusat sebelum memberikan API Key
+app.post('/api/auth/external-login', async (req, res) => {
+  const { username, password } = req.body;
+  const externalAuthUrl = process.env.EXTERNAL_AUTH_URL;
+
+  // Jika URL Eksternal belum disetel, sediakan mekanisme darurat (fallback)
+  if (!externalAuthUrl || externalAuthUrl.includes('nama-web-anda.com')) {
+    if (username === 'admin' && password === (process.env.API_KEY || 'kunci_rahasia_admin_123')) {
+      return res.json({ apiKey: process.env.API_KEY || 'kunci_rahasia_admin_123' });
+    }
+    return res.status(401).json({ error: 'Sistem Eksternal belum di-setup di .env. Gunakan username "admin" dan password API KEY Anda untuk sementara.' });
+  }
+
+  try {
+    // Memanggil API server Laravel/Eksternal
+    const extRes = await fetch(externalAuthUrl, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ username, password })
+    });
+
+    if (extRes.ok) {
+      // Jika server eksternal merespon 200 OK, berikan Master API Key
+      return res.json({ apiKey: process.env.API_KEY || 'kunci_rahasia_admin_123' });
+    } else {
+      return res.status(401).json({ error: 'Kredensial ditolak oleh Web Server Utama Anda.' });
+    }
+  } catch (error) {
+    return res.status(500).json({ error: 'Gagal menghubungi Web Server Utama. ' + error.message });
+  }
+});
+
 // [API SECURITY MIDDLEWARE]
 // Melindungi seluruh akses ke /api agar hanya bisa diakses menggunakan Master API Key
 app.use('/api', (req, res, next) => {
-  // Pengecualian: Google Callback tidak menggunakan API Key
-  if (req.path === '/auth/youtube/callback') return next();
+  // Pengecualian: Rute Auth dan Google Callback
+  if (req.path.startsWith('/auth/')) return next();
 
   const apiKey = process.env.API_KEY || 'kunci_rahasia_admin_123';
   const authHeader = req.headers['authorization'];

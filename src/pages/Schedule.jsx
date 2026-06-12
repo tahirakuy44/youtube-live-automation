@@ -5,7 +5,8 @@ import {
 } from 'date-fns';
 import { 
   ChevronLeft, ChevronRight, Calendar as CalendarIcon, 
-  Clock, Video, User, Plus, Trash2, Edit, Play, Square, Settings, Upload, Image as ImageIcon
+  Clock, Video, User, Trash2, Settings, Image as ImageIcon,
+  X, Tag, FileText, Globe
 } from 'lucide-react';
 import { apiFetch } from '../utils/api';
 import { ConfirmModal, AlertModal } from '../components/Modal';
