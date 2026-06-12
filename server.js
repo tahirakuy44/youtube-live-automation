@@ -71,7 +71,9 @@ async function initDb() {
       stream_id TEXT,
       video_quality TEXT DEFAULT '720p',
       background_music TEXT DEFAULT 'none',
-      loop_mode TEXT DEFAULT 'infinite'
+      loop_mode TEXT DEFAULT 'infinite',
+      rtmp_url TEXT,
+      stream_name TEXT
     );
 
     CREATE TABLE IF NOT EXISTS accounts (
@@ -102,6 +104,8 @@ async function initDb() {
   try { await db.run('ALTER TABLE schedules ADD COLUMN video_quality TEXT DEFAULT "720p"'); } catch { /* ignore */ }
   try { await db.run('ALTER TABLE schedules ADD COLUMN background_music TEXT DEFAULT "none"'); } catch { /* ignore */ }
   try { await db.run('ALTER TABLE schedules ADD COLUMN loop_mode TEXT DEFAULT "infinite"'); } catch { /* ignore */ }
+  try { await db.run('ALTER TABLE schedules ADD COLUMN rtmp_url TEXT'); } catch { /* ignore */ }
+  try { await db.run('ALTER TABLE schedules ADD COLUMN stream_name TEXT'); } catch { /* ignore */ }
 
   console.log('Database SQLite initialized successfully.');
   

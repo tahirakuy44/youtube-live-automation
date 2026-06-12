@@ -16,26 +16,33 @@ export const initStreamEngine = (db) => {
     try {
       const now = new Date();
       
-      // Fetch all pending schedules
-      const pendingSchedules = await db.all('SELECT * FROM schedules WHERE status = "pending"');
+      // Fetch all active schedules
+      const activeSchedules = await db.all('SELECT * FROM schedules WHERE status IN ("pending", "live", "starting")');
       
-      for (const schedule of pendingSchedules) {
+      for (const schedule of activeSchedules) {
         // Parse start date time
         const startDateTime = new Date(`${schedule.start_date}T${schedule.start_time}:00`);
-        
-        if (now >= startDateTime) {
-          console.log(`[ENGINE] Starting schedule: ${schedule.title} (${schedule.id})`);
-          await startStream(db, schedule);
-        }
-      }
-
-      // Check for streams that need to stop
-      const liveSchedules = await db.all('SELECT * FROM schedules WHERE status = "live"');
-      for (const schedule of liveSchedules) {
         const endDateTime = new Date(`${schedule.end_date}T${schedule.end_time}:00`);
-        if (now >= endDateTime) {
+        
+        // 1. Check if it's time to STOP
+        if (now >= endDateTime && schedule.status === "live") {
           console.log(`[ENGINE] Stopping schedule: ${schedule.title} (${schedule.id})`);
           await stopStream(db, schedule.id);
+          continue;
+        }
+
+        // 2. Check if it's time to START or RESUME
+        if (now >= startDateTime && now < endDateTime) {
+          if (schedule.status === "pending") {
+            console.log(`[ENGINE] Starting schedule: ${schedule.title} (${schedule.id})`);
+            await startStream(db, schedule);
+          } else if (schedule.status === "live" || schedule.status === "starting") {
+            // If it's live/starting but FFmpeg is missing from memory, it crashed!
+            if (!activeStreams.has(schedule.id)) {
+              console.warn(`[ENGINE] WARNING: Stream ${schedule.id} is marked as ${schedule.status} but FFmpeg is NOT running! Initiating Auto-Resume...`);
+              await resumeStream(db, schedule);
+            }
+          }
         }
       }
 
@@ -111,10 +118,36 @@ async function startStream(db, schedule) {
     });
 
     // Save mapping to DB
-    await db.run('UPDATE schedules SET broadcast_id = ?, stream_id = ? WHERE id = ?', [broadcastId, streamId, schedule.id]);
+    await db.run('UPDATE schedules SET broadcast_id = ?, stream_id = ?, rtmp_url = ?, stream_name = ? WHERE id = ?', 
+      [broadcastId, streamId, rtmpUrl, streamName, schedule.id]);
 
+    await launchFFmpeg(db, schedule, rtmpUrl, streamName);
+
+  } catch (error) {
+    console.error(`[ENGINE] Failed to start stream for schedule ${schedule.id}:`, error);
+    await db.run('UPDATE schedules SET status = "error" WHERE id = ?', [schedule.id]);
+  }
+}
+
+export async function resumeStream(db, schedule) {
+  try {
+    console.log(`[ENGINE] Auto-resuming crashed stream for schedule ${schedule.id}...`);
+    if (!schedule.rtmp_url || !schedule.stream_name) {
+       throw new Error('Cannot resume: Missing RTMP URL or Stream Name in database.');
+    }
+    // Update status to starting just in case
+    await db.run('UPDATE schedules SET status = "starting" WHERE id = ?', [schedule.id]);
+    await launchFFmpeg(db, schedule, schedule.rtmp_url, schedule.stream_name);
+  } catch (error) {
+    console.error(`[ENGINE] Auto-resume failed for schedule ${schedule.id}:`, error);
+    await db.run('UPDATE schedules SET status = "error" WHERE id = ?', [schedule.id]);
+  }
+}
+
+async function launchFFmpeg(db, schedule, rtmpUrl, streamName) {
+  try {
     // 6. Build the random playlist
-    console.log('[ENGINE] Building Playlist for FFmpeg...');
+    console.log(`[ENGINE] Building Playlist for schedule ${schedule.id}...`);
     const playlist = await db.get('SELECT * FROM playlists WHERE id = ?', [schedule.media_source]);
     if (!playlist) throw new Error('Playlist not found');
 
@@ -232,7 +265,7 @@ async function startStream(db, schedule) {
     activeStreams.set(schedule.id, command);
 
   } catch (error) {
-    console.error(`[ENGINE] Failed to start stream for schedule ${schedule.id}:`, error);
+    console.error(`[ENGINE] Failed to launch FFmpeg for schedule ${schedule.id}:`, error);
     await db.run('UPDATE schedules SET status = "error" WHERE id = ?', [schedule.id]);
   }
 }
