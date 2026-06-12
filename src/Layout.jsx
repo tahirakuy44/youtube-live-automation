@@ -41,11 +41,17 @@ const Layout = () => {
         </nav>
         
         <div className="p-4 border-t border-slate-700/50">
-          <div className="flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-slate-800/50 cursor-pointer text-slate-400 transition-colors">
-            <div className="w-8 h-8 rounded-full bg-slate-700 flex items-center justify-center">A</div>
+          <div 
+            onClick={() => {
+              localStorage.removeItem('api_key');
+              window.location.href = '/login';
+            }}
+            className="flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-red-500/10 cursor-pointer text-slate-400 hover:text-red-400 transition-colors"
+          >
+            <div className="w-8 h-8 rounded-full bg-slate-700 flex items-center justify-center font-bold text-slate-300">A</div>
             <div>
               <p className="text-sm font-medium text-slate-200">Admin</p>
-              <p className="text-xs text-slate-500">Logout</p>
+              <p className="text-xs text-red-500/70">Logout</p>
             </div>
           </div>
         </div>

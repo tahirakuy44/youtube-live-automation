@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ShieldCheck, User, Lock } from 'lucide-react';
 
@@ -8,6 +8,13 @@ export default function Login() {
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const navigate = useNavigate();
+
+  // Jika sudah punya API Key, otomatis masuk Dashboard
+  useEffect(() => {
+    if (localStorage.getItem('api_key')) {
+      navigate('/monitoring');
+    }
+  }, [navigate]);
 
   const handleLogin = async (e) => {
     e.preventDefault();

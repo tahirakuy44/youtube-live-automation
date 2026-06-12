@@ -4,6 +4,7 @@ import {
   Trash2, Plus, Upload, CheckSquare, Square, 
   ListVideo, Shuffle, Play, X, Loader2, CheckCircle2, AlertCircle, PlusCircle
 } from 'lucide-react';
+import { apiFetch } from '../utils/api';
 import { ConfirmModal, PromptModal, AlertModal } from '../components/Modal';
 
 export default function Media() {
@@ -36,12 +37,12 @@ export default function Media() {
   const [savedPlaylists, setSavedPlaylists] = useState([]);
 
   useEffect(() => {
-    fetch('/api/files')
+    apiFetch('/api/files')
       .then(res => res.json())
       .then(data => setFiles(data))
       .catch(console.error);
 
-    fetch('/api/playlists')
+    apiFetch('/api/playlists')
       .then(res => res.json())
       .then(data => setSavedPlaylists(data))
       .catch(console.error);
@@ -182,7 +183,7 @@ export default function Media() {
       title: 'Delete Files',
       message: `Are you sure you want to delete ${selectedFiles.length} selected files?`,
       action: () => {
-        selectedFiles.forEach(id => fetch(`/api/files/${id}`, { method: 'DELETE' }).catch(console.error));
+        selectedFiles.forEach(id => apiFetch(`/api/files/${id}`, { method: 'DELETE' }).catch(console.error));
         setFiles(files.filter(f => !selectedFiles.includes(f.id)));
         setPlaylistItems(playlistItems.filter(p => !selectedFiles.includes(p.id)));
         setSelectedFiles([]);
@@ -230,7 +231,7 @@ export default function Media() {
       items: playlistItems
     };
     
-    fetch('/api/playlists', {
+    apiFetch('/api/playlists', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(newPlaylist)
@@ -254,7 +255,7 @@ export default function Media() {
       title: 'Delete Playlist',
       message: 'Are you sure you want to delete this playlist?',
       action: () => {
-        fetch(`/api/playlists/${id}`, { method: 'DELETE' }).then(() => {
+        apiFetch(`/api/playlists/${id}`, { method: 'DELETE' }).then(() => {
           setSavedPlaylists(savedPlaylists.filter(pl => pl.id !== id));
           if (activeFolder === id) setActiveFolder('all');
           setConfirmModal({ isOpen: false });
